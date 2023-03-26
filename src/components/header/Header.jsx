@@ -4,6 +4,7 @@ import hotel1 from '../../images/hotel-1.jpg';
 import Select from 'react-select';
 import { DatePicker } from '@mui/x-date-pickers';
 import { makeStyles } from '@mui/styles';
+import dayjs from 'dayjs';
 
 const colourStyles = {
   control: (styles, { isFocused }) => ({
@@ -24,14 +25,12 @@ const optionsObj = {
 
 const useStyles = makeStyles((theme) => ({
   textField: {
-    // minWidth: '20%',
-    // maxWidth: '200px',
     zIndex: '10',
     fontSize: '14px',
   },
 }));
 
-function Header() {
+function Header({ onFetchHotelsData }) {
   const locale = navigator.language;
   const classes = useStyles();
 
@@ -41,8 +40,8 @@ function Header() {
   const [inputAdults, setInputAdults] = useState(0);
   const [inputChildren, setInputChildren] = useState(0);
   const [inputRooms, setInputRooms] = useState(0);
-  const [checkinDate, setCheckinDate] = useState('');
-  const [checkoutDate, setCheckoutDate] = useState('');
+  const [checkinDate, setCheckinDate] = useState(dayjs());
+  const [checkoutDate, setCheckoutDate] = useState(dayjs());
 
   const searchHotelHandler = async function () {
     const fetchData = await fetch(
@@ -51,7 +50,6 @@ function Header() {
     );
     if (!fetchData.ok) return;
     const res = await fetchData.json();
-    console.log(res);
 
     setOptions(
       res.map((item) => ({
@@ -66,15 +64,23 @@ function Header() {
 
   const onSearchHandler = async function (e) {
     e.preventDefault();
-    const fetchData = await fetch(
-      `https://booking-com.p.rapidapi.com/v1/hotels/search?checkin_date=${checkinDate}&checkout_date=${checkoutDate}&dest_id=-2097701&dest_type=city&${
-        inputChildren > 0 ? `children_number=${inputChildren}` : ''
-      }&adults_number=2&filter_by_currency=AED&order_by=popularity&locale=en-us&units=metric&room_number=1`,
-      options
-    );
-  };
 
-  console.log(inputAdults, inputChildren, inputRooms);
+    const checkIn = checkinDate.format('YYYY-MM-DD');
+    const checkOut = checkoutDate.format('YYYY-MM-DD');
+    const destId = selectedOption.destId;
+    const destType = selectedOption.destType;
+
+    const fetchData = await fetch(
+      `https://booking-com.p.rapidapi.com/v1/hotels/search?checkin_date=${checkIn}&checkout_date=${checkOut}&dest_id=${destId}&dest_type=${destType}&${
+        inputChildren > 0 ? `children_number=${inputChildren}` : ''
+      }&adults_number=${inputAdults}&filter_by_currency=AED&order_by=popularity&locale=en-us&units=metric&room_number=${inputRooms}`,
+      optionsObj
+    );
+
+    const res = await fetchData.json();
+    // console.log(res);
+    onFetchHotelsData(res.result);
+  };
 
   return (
     <header className="h-[50vh] relative text-slate-600 text-base">
@@ -99,7 +105,10 @@ function Header() {
             }}
             value={selectedOption}
             options={options}
-            onChange={(e) => setSelectedOption(e)}
+            onChange={(e) => {
+              console.log(e);
+              setSelectedOption(e);
+            }}
             getOptionLabel={(option) => `${option.destLabel}`}
           />
           <div className="flex gap-2 flex-wrap px-1">
@@ -109,12 +118,18 @@ function Header() {
                 className={classes.textField}
                 slotProps={{ textField: { size: 'small' } }}
                 format="YYYY/MM/DD"
+                onChange={(e) => {
+                  setCheckinDate(e);
+                }}
+                // value={checkinDate}
               />
               <DatePicker
                 label="check-out"
                 className={classes.textField}
                 slotProps={{ textField: { size: 'small' } }}
                 format="YYYY/MM/DD"
+                onChange={(e) => setCheckoutDate(e)}
+                // value={checkoutDate}
               />
             </div>
             <div className="border self-stretch h-full p-1.5 border-slate-300 w-[49%] rounded-sm max-md:w-[100%] max-lg:width-full">
